@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
@@ -7,18 +8,15 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 import asyncio
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # ====== SOZLAMALAR ======
-# Token va Admin ID Render'dagi "Environment Variables" dan o'qiladi.
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-
-# Admin ID - /myid orqali o'z ID'ingizni bilib, Render'da ADMIN_ID qiymatini kiritasiz
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
 
 CARD_NUMBER = "6262 5707 8346 7618"
 CARD_OWNER = "M.Gulmira"
 
-# ====== TARIFLAR ======
 PLANS = {
     "professional": {
         "name": "Professional ⭐",
@@ -52,12 +50,29 @@ PLANS = {
     },
 }
 
-PRO_LINK = "https://maktabgachahub.uz/pro"  # tasdiqlangandan keyin yuboriladigan link
+PRO_LINK = "https://maktabgachahub.uz/pro"
 
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
+
+
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"Bot ishlab turibdi")
+
+    def log_message(self, format, *args):
+        pass
+
+
+def run_health_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server.serve_forever()
 
 
 class PaymentStates(StatesGroup):
@@ -110,8 +125,7 @@ async def cmd_myid(message: Message):
 @dp.callback_query(lambda c: c.data == "back_to_menu")
 async def back_to_menu(callback: CallbackQuery):
     await callback.message.edit_text(
-        "🌟 *MaktabgachaHub Premium obuna*\n\n"
-        "Tarifni tanlang 👇",
+        "🌟 *MaktabgachaHub Premium obuna*\n\nTarifni tanlang 👇",
         parse_mode="Markdown",
         reply_markup=main_menu_kb()
     )
@@ -208,6 +222,7 @@ async def process_reject(callback: CallbackQuery):
 
 
 async def main():
+    threading.Thread(target=run_health_server, daemon=True).start()
     await dp.start_polling(bot)
 
 
