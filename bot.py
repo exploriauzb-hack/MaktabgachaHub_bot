@@ -9,25 +9,48 @@ from aiogram.fsm.storage.memory import MemoryStorage
 import asyncio
 
 # ====== SOZLAMALAR ======
-# Token va Admin ID endi Render'dagi "Environment Variables" dan o'qiladi.
-# Lokal sinash uchun pastdagi qatorlarga vaqtincha o'z qiymatlaringizni yozishingiz mumkin.
+# Token va Admin ID Render'dagi "Environment Variables" dan o'qiladi.
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
-# Admin ID - hozircha 0, /myid orqali o'z ID'ingizni bilib, Render'da ADMIN_ID qiymatini kiritasiz
+# Admin ID - /myid orqali o'z ID'ingizni bilib, Render'da ADMIN_ID qiymatini kiritasiz
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
 
 CARD_NUMBER = "6262 5707 8346 7618"
 CARD_OWNER = "M.Gulmira"
 
-PRO_PRICE = "29 000 so'm"  # narxni o'zingiz moslang
-PRO_DESCRIPTION = (
-    "🌟 *MaktabgachaHub PRO*\n\n"
-    "Pro versiyada siz uchun:\n"
-    "✅ Barcha materiallarga to'liq kirish\n"
-    "✅ Reklamasiz interfeys\n"
-    "✅ Yangi qo'shimchalar birinchi bo'lib\n\n"
-    f"💰 Narxi: *{PRO_PRICE}*"
-)
+# ====== TARIFLAR ======
+PLANS = {
+    "professional": {
+        "name": "Professional ⭐",
+        "price": "49 000 so'm/oy",
+        "description": (
+            "🌟 *Professional* — eng mashhur tarif\n\n"
+            "✅ Cheksiz testlar (6 toifa)\n"
+            "✅ Barcha konspektlar (30+)\n"
+            "✅ O'yinlar, qo'shiqlar, mashg'ulotlar\n"
+            "✅ AI Konspekt generator\n"
+            "✅ Attestatsiya testlari\n"
+            "✅ Portfolio yaratish\n\n"
+            "💰 Narxi: *49 000 so'm/oy*"
+        ),
+    },
+    "korporativ": {
+        "name": "MTT Korporativ 🏢",
+        "price": "299 000 so'm/oy",
+        "description": (
+            "🏢 *MTT Korporativ* — butun muassasa uchun\n\n"
+            "✅ Professional + hamma narsa\n"
+            "✅ 20+ tarbiyachi uchun\n"
+            "✅ Admin boshqaruv paneli\n"
+            "✅ Davomat tizimi (QR)\n"
+            "✅ Ota-ona portali\n"
+            "✅ Bola rivojlanish monitoringi\n"
+            "✅ Oylik hisobotlar (PDF)\n"
+            "✅ Texnik yordam (telefon)\n\n"
+            "💰 Narxi: *299 000 so'm/oy*"
+        ),
+    },
+}
 
 PRO_LINK = "https://maktabgachahub.uz/pro"  # tasdiqlangandan keyin yuboriladigan link
 
@@ -43,7 +66,16 @@ class PaymentStates(StatesGroup):
 
 def main_menu_kb():
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💳 Pro sotib olish", callback_data="buy_pro")]
+        [InlineKeyboardButton(text="⭐ Professional — 49 000 so'm", callback_data="plan_professional")],
+        [InlineKeyboardButton(text="🏢 MTT Korporativ — 299 000 so'm", callback_data="plan_korporativ")],
+    ])
+    return kb
+
+
+def buy_kb(plan_key: str):
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💳 Sotib olish", callback_data=f"buy_{plan_key}")],
+        [InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_menu")],
     ])
     return kb
 
@@ -61,7 +93,10 @@ def confirm_kb(user_id: int):
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
     await message.answer(
-        PRO_DESCRIPTION,
+        "🌟 *MaktabgachaHub Premium obuna*\n\n"
+        "MTT tarbiyachilari uchun professional vositalar — testlar, konspektlar, "
+        "AI generator va ko'p narsa.\n\n"
+        "Tarifni tanlang 👇",
         parse_mode="Markdown",
         reply_markup=main_menu_kb()
     )
@@ -72,25 +107,59 @@ async def cmd_myid(message: Message):
     await message.answer(f"Sizning chat ID'ingiz: `{message.from_user.id}`", parse_mode="Markdown")
 
 
-@dp.callback_query(lambda c: c.data == "buy_pro")
+@dp.callback_query(lambda c: c.data == "back_to_menu")
+async def back_to_menu(callback: CallbackQuery):
+    await callback.message.edit_text(
+        "🌟 *MaktabgachaHub Premium obuna*\n\n"
+        "Tarifni tanlang 👇",
+        parse_mode="Markdown",
+        reply_markup=main_menu_kb()
+    )
+    await callback.answer()
+
+
+@dp.callback_query(lambda c: c.data.startswith("plan_"))
+async def show_plan(callback: CallbackQuery):
+    plan_key = callback.data.split("_", 1)[1]
+    plan = PLANS[plan_key]
+    await callback.message.edit_text(
+        plan["description"],
+        parse_mode="Markdown",
+        reply_markup=buy_kb(plan_key)
+    )
+    await callback.answer()
+
+
+@dp.callback_query(lambda c: c.data.startswith("buy_"))
 async def process_buy(callback: CallbackQuery, state: FSMContext):
+    plan_key = callback.data.split("_", 1)[1]
+    plan = PLANS[plan_key]
+
     text = (
         f"💳 To'lov uchun karta:\n\n"
         f"`{CARD_NUMBER}`\n"
         f"Egasi: *{CARD_OWNER}*\n\n"
-        f"Summasi: *{PRO_PRICE}*\n\n"
+        f"Tarif: *{plan['name']}*\n"
+        f"Summasi: *{plan['price']}*\n\n"
         f"To'lovni amalga oshirgandan so'ng, chek/screenshot rasmini shu yerga yuboring 👇"
     )
     await callback.message.answer(text, parse_mode="Markdown")
     await state.set_state(PaymentStates.waiting_screenshot)
+    await state.update_data(plan_key=plan_key)
     await callback.answer()
 
 
 @dp.message(PaymentStates.waiting_screenshot, lambda m: m.photo or m.document)
 async def process_screenshot(message: Message, state: FSMContext):
     user = message.from_user
+    data = await state.get_data()
+    plan_key = data.get("plan_key", "professional")
+    plan = PLANS[plan_key]
+
     caption = (
         f"🆕 Yangi to'lov so'rovi!\n\n"
+        f"📦 Tarif: {plan['name']}\n"
+        f"💰 Summasi: {plan['price']}\n\n"
         f"👤 Foydalanuvchi: {user.full_name}\n"
         f"🔗 Username: @{user.username if user.username else 'yoq'}\n"
         f"🆔 ID: {user.id}"
