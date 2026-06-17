@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MaktabgachaHub — Admin Panel</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    /* ── Stat cards ── */
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-bottom:32px; }
+    .stat-card { background:#fff; border:1px solid var(--br); border-radius:14px; padding:20px; text-align:center; }
+    .stat-card .s-num { font-size:2rem; font-weight:700; color:var(--p); }
+    .stat-card .s-lbl { font-size:.85rem; color:var(--mu); margin-top:4px; }
+
+    /* ── Badges ── */
+    .badge-free  { background:#e5e7eb; color:#374151; padding:3px 10px; border-radius:20px; font-size:.78rem; font-weight:600; }
+    .badge-pro   { background:#ede9ff; color:var(--p);  padding:3px 10px; border-radius:20px; font-size:.78rem; font-weight:600; }
+    .badge-corp  { background:#fef3c7; color:#92400e; padding:3px 10px; border-radius:20px; font-size:.78rem; font-weight:600; }
+
+    /* ── Table ── */
+    .tbl-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:.9rem; }
+    th { background:var(--bg); color:var(--mu); font-weight:600; text-align:left; padding:10px 12px; border-bottom:2px solid var(--br); white-space:nowrap; }
+    td { padding:10px 12px; border-bottom:1px solid var(--br); vertical-align:middle; }
+    tr:hover td { background:#faf9ff; }
+    .action-btns { display:flex; gap:6px; flex-wrap:wrap; }
+    .btn-pro  { background:var(--p); color:#fff; border:none; padding:5px 10px; border-radius:8px; font-size:.78rem; cursor:pointer; font-weight:600; }
+    .btn-corp { background:var(--go); color:#fff; border:none; padding:5px 10px; border-radius:8px; font-size:.78rem; cursor:pointer; font-weight:600; }
+    .btn-free { background:#e5e7eb; color:#374151; border:none; padding:5px 10px; border-radius:8px; font-size:.78rem; cursor:pointer; font-weight:600; }
+    .btn-del  { background:var(--err); color:#fff; border:none; padding:5px 10px; border-radius:8px; font-size:.78rem; cursor:pointer; font-weight:600; }
+
+    /* ── Filters ── */
+    .filter-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+    .filter-row input, .filter-row select { flex:1; min-width:180px; }
+
+    /* ── Konspekt form ── */
+    .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
+    .form-grid textarea { resize:vertical; min-height:90px; }
+    .sec-divider { border:none; border-top:2px solid var(--br); margin:32px 0; }
+
+    /* ── Access denied ── */
+    #access-denied { display:none; text-align:center; padding:60px 20px; }
+    #access-denied .icon { font-size:3rem; }
+    #access-denied p { color:var(--mu); margin-top:8px; }
+
+    /* ── Loading ── */
+    #loading-screen { text-align:center; padding:80px 20px; color:var(--mu); }
+
+    /* ── Pagination ── */
+    .pag { display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-top:14px; flex-wrap:wrap; }
+    .pag button { background:var(--bg); border:1px solid var(--br); padding:5px 12px; border-radius:8px; cursor:pointer; font-size:.85rem; }
+    .pag button.active { background:var(--p); color:#fff; border-color:var(--p); }
+    .pag span { color:var(--mu); font-size:.85rem; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="dashboard.html" class="nav-brand">🎓 MaktabgachaHub</a>
+  <div class="nav-right">
+    <span class="badge badge-pro" style="margin-right:8px;">🛡️ Admin Panel</span>
+    <span id="nav-name" style="color:var(--mu);font-size:.9rem;margin-right:12px;"></span>
+    <button class="btn-secondary" onclick="signOut()" style="padding:6px 14px;font-size:.85rem;">Chiqish</button>
+  </div>
+</nav>
+
+<!-- LOADING -->
+<div id="loading-screen" class="container">
+  ⏳ Yuklanmoqda...
+</div>
+
+<!-- ACCESS DENIED -->
+<div id="access-denied" class="container">
+  <div class="icon">🔒</div>
+  <h2>Sizda ruxsat yo'q</h2>
+  <p>Bu sahifa faqat adminlar uchun. Dashboard ga qaytarilmoqdasiz...</p>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="main-content" class="container" style="display:none; padding-top:24px; padding-bottom:48px;">
+
+  <h1 style="font-size:1.6rem; margin-bottom:4px;">🛡️ Admin Boshqaruv Paneli</h1>
+  <p style="color:var(--mu); margin-bottom:24px;">Foydalanuvchilar, obunalar va kontent boshqaruvi</p>
+
+  <!-- STATISTICS -->
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card"><div class="s-num" id="st-total">—</div><div class="s-lbl">Jami foydalanuvchilar</div></div>
+    <div class="stat-card"><div class="s-num" id="st-pro">—</div><div class="s-lbl">Pro foydalanuvchilar</div></div>
+    <div class="stat-card"><div class="s-num" id="st-corp">—</div><div class="s-lbl">Korporativ foydalanuvchilar</div></div>
+    <div class="stat-card"><div class="s-num" id="st-konspekt">—</div><div class="s-lbl">Jami konspektlar</div></div>
+  </div>
+
+  <!-- USERS TABLE -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="sec-title" style="margin-bottom:16px;">👥 Foydalanuvchilar boshqaruvi</div>
+
+    <div class="filter-row">
+      <input class="inp" id="search-inp" placeholder="🔍 Ism bo'yicha qidirish..." oninput="filterUsers()"/>
+      <select class="inp" id="plan-filter" onchange="filterUsers()">
+        <option value="">Barchasi</option>
+        <option value="free">Free</option>
+        <option value="pro">Pro</option>
+        <option value="corporate">Corporate</option>
+      </select>
+    </div>
+
+    <div class="tbl-wrap">
+      <table id="users-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Ism</th>
+            <th>Rol</th>
+            <th>Reja</th>
+            <th>XP</th>
+            <th>Ro'yxatdan o'tgan</th>
+            <th>Amallar</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr><td colspan="7" style="text-align:center;color:var(--mu);padding:24px;">Yuklanmoqda...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pag" id="pagination"></div>
+  </div>
+
+  <hr class="sec-divider"/>
+
+  <!-- ADD KONSPEKT -->
+  <div class="card">
+    <div class="sec-title" style="margin-bottom:16px;">📝 Yangi umumiy konspekt qo'shish</div>
+    <div class="form-grid">
+      <div>
+        <label style="font-size:.85rem;color:var(--mu);display:block;margin-bottom:4px;">Hafta (1–36)</label>
+        <input class="inp" type="number" id="k-hafta" min="1" max="36" placeholder="Masalan: 5"/>
+      </div>
+      <div>
+        <label style="font-size:.85rem;color:var(--mu);display:block;margin-bottom:4px;">Kun</label>
+        <select class="inp" id="k-kun">
+          <option value="Dushanba">Dushanba</option>
+          <option value="Seshanba">Seshanba</option>
+          <option value="Chorshanba">Chorshanba</option>
+          <option value="Payshanba">Payshanba</option>
+          <option value="Juma">Juma</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:.85rem;color:var(--mu);display:block;margin-bottom:4px;">Soha</label>
+        <select class="inp" id="k-soha">
+          <option value="Nutq va til">Nutq va til</option>
+          <option value="FEMP">FEMP</option>
+          <option value="Tabiat bilan tanishuv">Tabiat bilan tanishuv</option>
+          <option value="Tasviriy sanat">Tasviriy sanat</option>
+          <option value="Musiqa">Musiqa</option>
+          <option value="Jismoniy tarbiya">Jismoniy tarbiya</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:.85rem;color:var(--mu);display:block;margin-bottom:4px;">Mavzu</label>
+        <input class="inp" id="k-mavzu" placeholder="Mashg'ulot mavzusi"/>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label style="font-size:.85rem;color:var(--mu);display:block;margin-bottom:4px;">Maqsad</label>
+        <textarea class="inp" id="k-maqsad" placeholder="Mashg'ulot maqsadi..."></textarea>
+      </div>
+      <div>
+        <label style="font-size:.85rem;color:var(--mu);display:block;margin-bottom:4px;">Jihozlar</label>
+        <textarea class="inp" id="k-jihozlar" placeholder="Kerakli jihozlar..."></textarea>
+      </div>
+      <div>
+        <label style="font-size:.85rem;color:var(--mu);display:block;margin-bottom:4px;">Darsning borishi</label>
+        <textarea class="inp" id="k-borish" placeholder="Dars bosqichlari..."></textarea>
+      </div>
+      <div>
+        <label style="font-size:.85rem;color:var(--mu);display:block;margin-bottom:4px;">Kutilgan natija</label>
+        <textarea class="inp" id="k-natija" placeholder="Kutilgan natija..."></textarea>
+      </div>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn-primary" onclick="saveKonspekt()">💾 Saqlash</button>
+      <button class="btn-secondary" onclick="clearForm()">✕ Tozalash</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  // ── State ──
+  let allUsers = [];
+  let filteredUsers = [];
+  const PAGE_SIZE = 20;
+  let currentPage = 1;
+
+  // ── Init ──
+  (async () => {
+    const auth = await initAuth(true);
+    if (!auth) return;
+
+    const role = _currentProfile?.role;
+    if (role !== 'admin' && role !== 'superadmin') {
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('access-denied').style.display = 'block';
+      setTimeout(() => { window.location.href = 'dashboard.html'; }, 2000);
+      return;
+    }
+
+    document.getElementById('nav-name').textContent = _currentProfile?.full_name || '';
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+
+    await Promise.all([loadStats(), loadUsers()]);
+  })();
+
+  // ── Sign out ──
+  async function signOut() {
+    await _sb.auth.signOut();
+    window.location.href = 'index.html';
+  }
+
+  // ── Stats ──
+  async function loadStats() {
+    try {
+      const [{ count: total }, { count: pro }, { count: corp }, { count: konspekt }] = await Promise.all([
+        _sb.from('profiles').select('*', { count: 'exact', head: true }),
+        _sb.from('profiles').select('*', { count: 'exact', head: true }).eq('subscription_tier', 'pro'),
+        _sb.from('profiles').select('*', { count: 'exact', head: true }).eq('subscription_tier', 'corporate'),
+        _sb.from('konspektlar').select('*', { count: 'exact', head: true }),
+      ]);
+      document.getElementById('st-total').textContent    = total    ?? '—';
+      document.getElementById('st-pro').textContent      = pro      ?? '—';
+      document.getElementById('st-corp').textContent     = corp     ?? '—';
+      document.getElementById('st-konspekt').textContent = konspekt ?? '—';
+    } catch (e) {
+      showToast('Statistika yuklanmadi', 'err');
+    }
+  }
+
+  // ── Users ──
+  async function loadUsers() {
+    try {
+      const { data, error } = await _sb
+        .from('profiles')
+        .select('id, full_name, role, subscription_tier, xp, created_at')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      allUsers = data || [];
+      filteredUsers = [...allUsers];
+      renderTable();
+    } catch (e) {
+      showToast('Foydalanuvchilar yuklanmadi: ' + e.message, 'err');
+    }
+  }
+
+  function filterUsers() {
+    const q    = document.getElementById('search-inp').value.toLowerCase();
+    const plan = document.getElementById('plan-filter').value;
+    filteredUsers = allUsers.filter(u => {
+      const nameMatch = (u.full_name || '').toLowerCase().includes(q);
+      const planMatch = plan ? u.subscription_tier === plan : true;
+      return nameMatch && planMatch;
+    });
+    currentPage = 1;
+    renderTable();
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('users-tbody');
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const page  = filteredUsers.slice(start, start + PAGE_SIZE);
+
+    if (!page.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--mu);padding:24px;">Foydalanuvchi topilmadi</td></tr>';
+      renderPagination();
+      return;
+    }
+
+    tbody.innerHTML = page.map((u, i) => {
+      const num  = start + i + 1;
+      const name = u.full_name || '—';
+      const tier = u.subscription_tier || 'free';
+      const xp   = u.xp ?? 0;
+      const date = u.created_at ? new Date(u.created_at).toLocaleDateString('uz-UZ') : '—';
+      const badgeCls = tier === 'pro' ? 'badge-pro' : tier === 'corporate' ? 'badge-corp' : 'badge-free';
+      const badgeTxt = tier === 'pro' ? '⭐ Pro' : tier === 'corporate' ? '🏢 Corporate' : '🆓 Free';
+      const uid = u.id;
+
+      return `<tr>
+        <td style="color:var(--mu)">${num}</td>
+        <td><strong>${name}</strong><br/><span style="font-size:.75rem;color:var(--mu)">${uid.slice(0,8)}...</span></td>
+        <td><span style="font-size:.8rem;color:var(--mu)">${u.role || 'teacher'}</span></td>
+        <td><span class="${badgeCls}">${badgeTxt}</span></td>
+        <td>${xp}</td>
+        <td style="white-space:nowrap">${date}</td>
+        <td>
+          <div class="action-btns">
+            <button class="btn-pro"  onclick="changePlan('${uid}','${name}','pro')">⭐ Pro</button>
+            <button class="btn-corp" onclick="changePlan('${uid}','${name}','corporate')">🏢 Corp</button>
+            <button class="btn-free" onclick="changePlan('${uid}','${name}','free')">🆓 Free</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    renderPagination();
+  }
+
+  function renderPagination() {
+    const total = Math.ceil(filteredUsers.length / PAGE_SIZE);
+    const pag   = document.getElementById('pagination');
+    if (total <= 1) { pag.innerHTML = ''; return; }
+
+    let html = `<span>${filteredUsers.length} ta natija</span>`;
+    for (let p = 1; p <= total; p++) {
+      html += `<button class="${p === currentPage ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`;
+    }
+    pag.innerHTML = html;
+  }
+
+  function goPage(p) { currentPage = p; renderTable(); }
+
+  // ── Change plan ──
+  async function changePlan(uid, name, plan) {
+    const labels = { pro: 'Pro', corporate: 'Korporativ', free: 'Free (bepul)' };
+    const ok = confirm(`Haqiqatan ham "${name}"ni ${labels[plan]} qilmoqchimisiz?`);
+    if (!ok) return;
+
+    try {
+      // 1. profiles jadvali yangilash
+      const { error: profErr } = await _sb
+        .from('profiles')
+        .update({ subscription_tier: plan })
+        .eq('id', uid);
+      if (profErr) throw profErr;
+
+      // 2. subscriptions jadvali
+      if (plan === 'free') {
+        // Aktiv obunalarni expired qilish
+        await _sb.from('subscriptions').update({ status: 'expired' })
+          .eq('user_id', uid).eq('status', 'active');
+      } else {
+        // Eski aktiv obunalarni bekor qilish
+        await _sb.from('subscriptions').update({ status: 'cancelled' })
+          .eq('user_id', uid).eq('status', 'active');
+
+        const now   = new Date();
+        const end   = new Date(now);
+        end.setMonth(end.getMonth() + 1);
+
+        const { error: subErr } = await _sb.from('subscriptions').insert({
+          user_id:               uid,
+          plan:                  plan,
+          status:                'active',
+          payment_provider:      'admin',
+          current_period_start:  now.toISOString(),
+          current_period_end:    end.toISOString(),
+        });
+        if (subErr) throw subErr;
+      }
+
+      showToast(`✅ ${name} — ${labels[plan]} rejasiga o'tkazildi`, 'ok');
+
+      // Local state yangilash (qayta fetch qilmaslik uchun)
+      const u = allUsers.find(x => x.id === uid);
+      if (u) u.subscription_tier = plan;
+      filterUsers();
+      loadStats();
+
+    } catch (e) {
+      showToast('Xato: ' + e.message, 'err');
+    }
+  }
+
+  // ── Konspekt ──
+  async function saveKonspekt() {
+    const hafta   = parseInt(document.getElementById('k-hafta').value);
+    const kun     = document.getElementById('k-kun').value;
+    const soha    = document.getElementById('k-soha').value;
+    const mavzu   = document.getElementById('k-mavzu').value.trim();
+    const maqsad  = document.getElementById('k-maqsad').value.trim();
+    const jihozlar= document.getElementById('k-jihozlar').value.trim();
+    const borish  = document.getElementById('k-borish').value.trim();
+    const natija  = document.getElementById('k-natija').value.trim();
+
+    if (!hafta || hafta < 1 || hafta > 36) { showToast('Hafta raqamini to'g'ri kiriting (1–36)', 'err'); return; }
+    if (!mavzu)   { showToast('Mavzuni kiriting', 'err'); return; }
+    if (!maqsad)  { showToast('Maqsadni kiriting', 'err'); return; }
+    if (!borish)  { showToast('Darsning borishini kiriting', 'err'); return; }
+
+    try {
+      const { error } = await _sb.from('konspektlar').insert({
+        teacher_id:   null,
+        hafta,
+        kun,
+        soha,
+        mavzu,
+        maqsad,
+        jihozlar,
+        borish,
+        natija,
+        is_public:    true,
+        ai_generated: false,
+      });
+      if (error) throw error;
+      showToast('✅ Konspekt muvaffaqiyatli saqlandi!', 'ok');
+      clearForm();
+      loadStats();
+    } catch (e) {
+      showToast('Saqlashda xato: ' + e.message, 'err');
+    }
+  }
+
+  function clearForm() {
+    ['k-hafta','k-mavzu','k-maqsad','k-jihozlar','k-borish','k-natija'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+  }
+</script>
+</body>
+</html>
