@@ -50,7 +50,7 @@ PLANS = {
     },
 }
 
-PRO_LINK = "https://maktabgachahub.uz/pro"
+ADMIN_CONTACT = "@azadib_way"  # tasdiqlangandan keyin foydalanuvchiga ko'rsatiladigan kontakt
 
 logging.basicConfig(level=logging.INFO)
 
@@ -204,7 +204,8 @@ async def process_confirm(callback: CallbackQuery):
     user_id = int(callback.data.split("_")[1])
     await bot.send_message(
         user_id,
-        f"🎉 To'lovingiz tasdiqlandi!\n\nPro versiyaga havola: {PRO_LINK}"
+        f"🎉 To'lovingiz tasdiqlandi!\n\n"
+        f"Pro versiyani faollashtirish uchun {ADMIN_CONTACT} ga yozing 👋"
     )
     await callback.message.edit_caption(callback.message.caption + "\n\n✅ TASDIQLANDI")
     await callback.answer("Tasdiqlandi va foydalanuvchiga xabar yuborildi")
