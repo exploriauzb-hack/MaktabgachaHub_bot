@@ -50,7 +50,7 @@ PLANS = {
     },
 }
 
-PRO_LINK = "https://maktabgachahub.uz/pro"
+ADMIN_CONTACT = "@azadib_way"  # tasdiqlangandan keyin foydalanuvchiga ko'rsatiladigan kontakt
 
 logging.basicConfig(level=logging.INFO)
 
@@ -204,7 +204,8 @@ async def process_confirm(callback: CallbackQuery):
     user_id = int(callback.data.split("_")[1])
     await bot.send_message(
         user_id,
-        f"🎉 To'lovingiz tasdiqlandi!\n\nPro versiyaga havola: {PRO_LINK}"
+        f"🎉 To'lovingiz tasdiqlandi!\n\n"
+        f"Pro versiyani faollashtirish uchun {ADMIN_CONTACT} ga yozing 👋"
     )
     await callback.message.edit_caption(callback.message.caption + "\n\n✅ TASDIQLANDI")
     await callback.answer("Tasdiqlandi va foydalanuvchiga xabar yuborildi")
@@ -223,7 +224,12 @@ async def process_reject(callback: CallbackQuery):
 
 async def main():
     threading.Thread(target=run_health_server, daemon=True).start()
-    await dp.start_polling(bot)
+    while True:
+        try:
+            await dp.start_polling(bot)
+        except Exception as e:
+            logging.error(f"Polling xato bilan to'xtadi, 5 soniyadan keyin qayta urinib ko'ramiz: {e}")
+            await asyncio.sleep(5)
 
 
 if __name__ == "__main__":
