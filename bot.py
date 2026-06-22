@@ -26,8 +26,9 @@ PLANS = {
             "✅ Cheksiz testlar (6 toifa)\n"
             "✅ Barcha konspektlar (30+)\n"
             "✅ O'yinlar, qo'shiqlar, mashg'ulotlar\n"
-            "✅ AI Konspekt generator\n"
+            "✅ Yillik hisobotlar,namuna\n"
             "✅ Attestatsiya testlari\n"
+            "✅Ochiq mashg'ulotlar,rejasi\n"
             "✅ Portfolio yaratish\n\n"
             "💰 Narxi: *49 000 so'm/oy*"
         ),
@@ -38,13 +39,8 @@ PLANS = {
         "description": (
             "🏢 *MTT Korporativ* — butun muassasa uchun\n\n"
             "✅ Professional + hamma narsa\n"
-            "✅ 20+ tarbiyachi uchun\n"
-            "✅ Admin boshqaruv paneli\n"
-            "✅ Davomat tizimi (QR)\n"
-            "✅ Ota-ona portali\n"
-            "✅ Bola rivojlanish monitoringi\n"
-            "✅ Oylik hisobotlar (PDF)\n"
-            "✅ Texnik yordam (telefon)\n\n"
+            "✅ 6+ tarbiyachi uchun\n"
+            "✅ Yillik hisobotlar (PDF)\n"
             "💰 Narxi: *299 000 so'm/oy*"
         ),
     },
@@ -110,7 +106,7 @@ async def cmd_start(message: Message):
     await message.answer(
         "🌟 *MaktabgachaHub Premium obuna*\n\n"
         "MTT tarbiyachilari uchun professional vositalar — testlar, konspektlar, "
-        "AI generator va ko'p narsa.\n\n"
+        "Testlar va ko'p qulayliklar.\n\n"
         "Tarifni tanlang 👇",
         parse_mode="Markdown",
         reply_markup=main_menu_kb()
